@@ -1,4 +1,4 @@
-Belongs to Eli Levy,
+Belongs to Eli Levi,
 
 For company eyeways.
 
