@@ -23,7 +23,10 @@ public final class R {
     public static final class drawable {
         public static int elijpgpic=0x7f020000;
         public static int elipngpic=0x7f020001;
-        public static int ic_launcher=0x7f020002;
+        public static int handm=0x7f020002;
+        public static int ic_launcher=0x7f020003;
+        public static int ml=0x7f020004;
+        public static int time=0x7f020005;
     }
     public static final class id {
         public static int action_settings=0x7f080000;

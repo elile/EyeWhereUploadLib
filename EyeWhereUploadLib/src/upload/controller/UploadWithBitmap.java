@@ -2,42 +2,45 @@ package upload.controller;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.zip.GZIPOutputStream;
 
 import upload.constant.values;
 import upload.dal.BitmapImagePost;
-import android.annotation.TargetApi;
-import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
-import android.os.Build;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
 public class UploadWithBitmap 
 {
 
-	private Activity a;
-	private int counter=0;
+	private Context c;
+	private static int counter=0;
+	private static double sumTime=0;
 	ArrayList<Bitmap> bmps ;
 	Bitmap b;
 	String ret = "";
 
+	public int getCounter() {
+		return counter;
+	}
 
-	public UploadWithBitmap(Activity a) 
+	public double getSumTime() {
+		return sumTime;
+	}
+
+	public UploadWithBitmap(Context c) 
 	{
-		this.a = a;
+		this.c = c;
 		this.counter = 0;
 	}
 
-	public String uploadBitMapWithCrop(Bitmap bmp) 
+	public String uploadBitmapWithCrop(Bitmap bmp) 
 	{
 //		Log.e("eli", "big Bitmap size before compress = " + (sizeOf(bmp)/1048576) + "MB 1.67MB real");
 		
-		bmps = splitImage(bmp, 20);
+		bmps = splitImage(bmp, 4);
 		
 		for (Bitmap bitmap : bmps) 
 		{
@@ -53,9 +56,12 @@ public class UploadWithBitmap
 					double seconds = (double)end / 1000000000.0;
 					Log.e("eli", getId()+" "+seconds);
 				}
-				
 			};t.start();
-			
+			try {
+				t.join(500);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
 		return ret;
 	}
@@ -70,61 +76,50 @@ public class UploadWithBitmap
 		else 
 		{
 			counter++;
-			if (QualityGetSet.getQuality(a) == -1) 
+			if (QualityGetSet.getQuality(c) == -1) 
 			{
-				QualityGetSet.setQuality(a,90);
+				QualityGetSet.setQuality(c,90);
 			}
-			QualityGetSet.setQuality(a,50);
+			QualityGetSet.setQuality(c,30);
 
 //			Log.e("eli", "Bitmap size before compress = " + (sizeOf(bmp)/1048576) + "MB");
 
-			ByteArrayOutputStream bos = new ByteArrayOutputStream();
-			bmp.compress(CompressFormat.JPEG , QualityGetSet.getQuality(a), bos);
-			
+			long start = System.currentTimeMillis();
+
+			ByteArrayOutputStream bos_output = new ByteArrayOutputStream();
+			boolean isCompress = bmp.compress(CompressFormat.JPEG , QualityGetSet.getQuality(c), bos_output);
+			byte[] bos = bos_output.toByteArray();
 //			Log.e("eli", "before zip "+bos.toByteArray().toString()+"");
 
-			ByteArrayInputStream fileInputStream = new ByteArrayInputStream( bos.toByteArray());
+//			ByteArrayInputStream fileInputStream = new ByteArrayInputStream(bos);
 
-//			Log.e("eli", "Bitmap size after compress = " + (sizeOf(bmp)/1048576) + "MB");
+//			Log.e("eli", "isCompress = " + isCompress);	
+			long end=System.currentTimeMillis()-start; 
+			double seconds = (double)end / 1000.0;
+			sumTime+=seconds;
+//			Log.e("eli end compression", seconds+"");
+//			Log.e("eli", "byte array size = " + (bos.length/1024) +" KB");
+			
+//			for (int i = 1; i < bos.length; i++) {
+//				if(bos[i]<0)
+//					bos[i]=bos[i-1];
+//				Log.e("eli", bos[i]+"");
+//
+//			}
 
-			return new BitmapImagePost().postBMP(fileInputStream, values.URL_UPLOAD_ONE_IMAGE, getSN()+"_"+counter+"_"+id);
+			return new BitmapImagePost().postBMP(null, values.URL_UPLOAD_ONE_IMAGE, getSN()+"_"+counter+"_"+id, bos.length+102,bos);
 		}
 	}
 
-	private byte[] compressByteArray(byte[] byteArray) 
-	{
-		try {
-			byte[] dataToCompress = byteArray;
-			ByteArrayOutputStream byteStream =new ByteArrayOutputStream(dataToCompress.length);
-			GZIPOutputStream zipStream = new GZIPOutputStream(byteStream);
-			zipStream.write(dataToCompress);
-			zipStream.close();
-			byteStream.close();
-			return byteStream.toByteArray();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return byteArray;
-
-	}
-
+	
 	private String getSN()
 	{
-		TelephonyManager tManager = (TelephonyManager)a.getSystemService(Context.TELEPHONY_SERVICE);
+		TelephonyManager tManager = (TelephonyManager)c.getSystemService(Context.TELEPHONY_SERVICE);
 		String uid = tManager.getDeviceId();
 		return uid;
 	}
 
-	@TargetApi(Build.VERSION_CODES.HONEYCOMB_MR1)
-	private int sizeOf(Bitmap data) 
-	{
-		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB_MR1) 
-		{
-			return data.getRowBytes() * data.getHeight();
-		} else {
-			return data.getByteCount();
-		}
-	}
+	
 
 	private ArrayList<Bitmap> splitImage(Bitmap bmp, int smallimage_Numbers)
 	{      
